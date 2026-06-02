@@ -45,7 +45,8 @@ export interface IUser extends Document {
   email: string;
   phone?: string;
   avatar?: string;
-  password: string;
+  password?: string;
+  authProvider?: 'local' | 'google';
   cart: { tourId: string; title: string; location: string; image?: string }[];
   favourites: {
     itemId: string;
@@ -66,7 +67,8 @@ const UserSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     phone: { type: String, trim: true },
     avatar: { type: String },
-    password: { type: String, required: true, minlength: 6 },
+    password: { type: String, minlength: 6 },
+    authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
     cart: [CartItemSchema],
     favourites: [FavouriteItemSchema],
     otp: OtpSchema,
