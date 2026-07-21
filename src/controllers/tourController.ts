@@ -5,10 +5,45 @@ import { AuthRequest } from '../middleware/auth';
 // GET /api/tours
 export const getTours = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { category } = req.query;
-    const filter = category ? { category } : {};
-    const tours = await Tour.find(filter).select('-itinerary -reviewsList -inclusions -exclusions');
-    res.json({ success: true, count: tours.length, data: tours });
+    const {
+      q,
+      region,
+      category,
+      ratingMin,
+      page = '1',
+      pageSize = '20',
+    } = req.query as Record<string, string>;
+
+    const filter: Record<string, unknown> = {};
+
+    if (q) {
+      filter['$text'] = { $search: q };
+    }
+    if (region) filter.region = { $regex: region, $options: 'i' };
+    if (category) filter.category = category;
+    if (ratingMin) filter.rating = { $gte: parseFloat(ratingMin) };
+
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limit = Math.min(parseInt(pageSize, 10) || 20, 100);
+    const skip = (pageNum - 1) * limit;
+
+    const [tours, total] = await Promise.all([
+      Tour.find(filter)
+        .select('-itinerary -reviewsList -inclusions -exclusions')
+        .sort(q ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Tour.countDocuments(filter),
+    ]);
+
+    res.json({
+      success: true,
+      total,
+      page: pageNum,
+      pageSize: limit,
+      pages: Math.ceil(total / limit),
+      data: tours,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch tours' });
   }
