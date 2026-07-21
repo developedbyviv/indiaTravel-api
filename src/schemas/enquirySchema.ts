@@ -55,3 +55,15 @@ export const cartEnquirySchema = z.object({
     message: z.string().max(700, 'Message too long').optional(),
   }),
 });
+
+// ── 4. Trip Cart Enquiry (POST /enquiries/trip) ───────────────────
+export const tripEnquirySchema = z.object({
+  mainTour: z.string().min(1, 'Main tour is required'),
+  addOns: z.array(z.string()).optional(),
+  traveller: travellerBase.extend({
+    firstName: z.string().min(1, 'First name is required'),
+    lastName: z.string().min(1, 'Last name is required'),
+    personCount: z.number().int().min(1).optional(),
+    message: z.string().max(700).optional(),
+  }),
+});
