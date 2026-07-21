@@ -33,6 +33,7 @@ const ReviewSchema = new Schema(
 export interface ITour extends Document {
   title: string;
   location: string;
+  region?: string;
   description: string;
   image: string;
   rating: number;
@@ -65,6 +66,7 @@ const TourSchema = new Schema<ITour>(
   {
     title: { type: String, required: true, trim: true },
     location: { type: String, required: true },
+    region: { type: String, trim: true },
     description: { type: String, required: true },
     image: { type: String, required: true },
     rating: { type: Number, default: 0, min: 0, max: 5 },
@@ -82,5 +84,8 @@ const TourSchema = new Schema<ITour>(
   },
   { timestamps: true }
 );
+
+// Full-text search index on title, description and location
+TourSchema.index({ title: 'text', description: 'text', location: 'text' });
 
 export default mongoose.model<ITour>('Tour', TourSchema);

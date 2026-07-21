@@ -57,6 +57,7 @@ export interface IUser extends Document {
     category: 'tours' | 'eat' | 'activities' | 'blogs';
   }[];
   otp?: { code?: string; expiresAt?: Date };
+  refreshToken?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -72,6 +73,7 @@ const UserSchema = new Schema<IUser>(
     cart: [CartItemSchema],
     favourites: [FavouriteItemSchema],
     otp: OtpSchema,
+    refreshToken: { type: String },
   },
   { timestamps: true }
 );

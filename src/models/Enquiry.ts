@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type EnquiryType = 'itinerary' | 'custom' | 'cart';
+export type EnquiryType = 'itinerary' | 'custom' | 'cart' | 'contact' | 'trip';
 
 export interface IEnquiry extends Document {
   type: EnquiryType;
@@ -26,13 +26,22 @@ export interface IEnquiry extends Document {
   // Cart enquiry
   cartItems?: { id: string; title: string; location: string }[];
 
+  // Trip enquiry (POST /enquiries/trip)
+  mainTour?: string;
+  addOns?: string[];
+
+  // Contact form enquiry
+  subject?: string;
+  country?: string;
+  countryCode?: string;
+
   // Common traveller details
-  traveller: {
+  traveller?: {
     firstName?: string;
     lastName?: string;
     fullName?: string;
-    email: string;
-    phone: string;
+    email?: string;
+    phone?: string;
     startDate?: string;
     meetingPoint?: string;
     personCount?: number;
@@ -45,7 +54,7 @@ export interface IEnquiry extends Document {
 
 const EnquirySchema = new Schema<IEnquiry>(
   {
-    type: { type: String, required: true, enum: ['itinerary', 'custom', 'cart'] },
+    type: { type: String, required: true, enum: ['itinerary', 'custom', 'cart', 'contact', 'trip'] },
     userId: { type: Schema.Types.ObjectId, ref: 'User' },
 
     // itinerary
@@ -75,13 +84,22 @@ const EnquirySchema = new Schema<IEnquiry>(
       },
     ],
 
+    // trip
+    mainTour: { type: String },
+    addOns: [{ type: String }],
+
+    // contact
+    subject: { type: String },
+    country: { type: String },
+    countryCode: { type: String },
+
     // traveller (common)
     traveller: {
       firstName: { type: String },
       lastName: { type: String },
       fullName: { type: String },
-      email: { type: String, required: true },
-      phone: { type: String, required: true },
+      email: { type: String },
+      phone: { type: String },
       startDate: { type: String },
       meetingPoint: { type: String },
       personCount: { type: Number },
