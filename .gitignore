@@ -3,3 +3,11 @@ dist/
 .env
 *.log
 .DS_Store
+
+# ── Local-only test & scratch files ──────────────────────────────
+test-*.js
+test-*.ts
+TEST-RESULTS.md
+*.test.js
+*.spec.js
+scratch/
