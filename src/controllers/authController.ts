@@ -2,19 +2,27 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 import User from '../models/User';
 import { sendOtpEmail } from '../utils/mailer';
 import { AuthRequest } from '../middleware/auth';
 
-const generateToken = (userId: string): string =>
+// ── Token helpers ─────────────────────────────────────────────────
+
+const generateAccessToken = (userId: string): string =>
   jwt.sign({ id: userId }, process.env.JWT_SECRET as string, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    expiresIn: (process.env.JWT_EXPIRES_IN || '15m') as unknown as number,
+  });
+
+const generateRefreshToken = (userId: string): string =>
+  jwt.sign({ id: userId }, process.env.JWT_REFRESH_SECRET as string || process.env.JWT_SECRET as string, {
+    expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || '30d') as unknown as number,
   });
 
 const generateOtp = (): string =>
   crypto.randomInt(100000, 999999).toString();
 
-// POST /api/auth/signup
+// ── POST /auth/register (alias: /auth/signup) ────────────────────
 export const signup = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email, password, phone } = req.body;
@@ -27,19 +35,24 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
 
     const hashed = await bcrypt.hash(password, 12);
     const user = await User.create({ name, email, phone, password: hashed });
-    const token = generateToken(user._id.toString());
+
+    const accessToken = generateAccessToken(user._id.toString());
+    const refreshToken = generateRefreshToken(user._id.toString());
+    user.refreshToken = refreshToken;
+    await user.save();
 
     res.status(201).json({
       success: true,
-      token,
-      user: { name: user.name, email: user.email, phone: user.phone, avatar: user.avatar },
+      accessToken,
+      refreshToken,
+      user: { id: user._id, name: user.name, email: user.email, phone: user.phone, avatar: user.avatar },
     });
   } catch {
     res.status(500).json({ success: false, message: 'Signup failed' });
   }
 };
 
-// POST /api/auth/login
+// ── POST /auth/login ─────────────────────────────────────────────
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
@@ -61,25 +74,76 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const token = generateToken(user._id.toString());
+    const accessToken = generateAccessToken(user._id.toString());
+    const refreshToken = generateRefreshToken(user._id.toString());
+    user.refreshToken = refreshToken;
+    await user.save();
+
     res.json({
       success: true,
-      token,
-      user: { name: user.name, email: user.email, phone: user.phone, avatar: user.avatar },
+      accessToken,
+      refreshToken,
+      user: { id: user._id, name: user.name, email: user.email, phone: user.phone, avatar: user.avatar },
     });
   } catch {
     res.status(500).json({ success: false, message: 'Login failed' });
   }
 };
 
-import { OAuth2Client } from 'google-auth-library';
+// ── POST /auth/logout ────────────────────────────────────────────
+export const logout = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (req.userId) {
+      await User.findByIdAndUpdate(req.userId, { $unset: { refreshToken: '' } });
+    }
+    res.json({ success: true, message: 'Logged out successfully' });
+  } catch {
+    res.status(500).json({ success: false, message: 'Logout failed' });
+  }
+};
+
+// ── POST /auth/refresh ───────────────────────────────────────────
+export const refreshToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { refreshToken: token } = req.body;
+    if (!token) {
+      res.status(400).json({ success: false, message: 'Refresh token required' });
+      return;
+    }
+
+    const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET as string;
+    let decoded: { id: string };
+    try {
+      decoded = jwt.verify(token, refreshSecret) as { id: string };
+    } catch {
+      res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
+      return;
+    }
+
+    const user = await User.findById(decoded.id);
+    if (!user || user.refreshToken !== token) {
+      res.status(401).json({ success: false, message: 'Refresh token revoked or not found' });
+      return;
+    }
+
+    const accessToken = generateAccessToken(user._id.toString());
+    const newRefreshToken = generateRefreshToken(user._id.toString());
+    user.refreshToken = newRefreshToken;
+    await user.save();
+
+    res.json({ success: true, accessToken, refreshToken: newRefreshToken });
+  } catch {
+    res.status(500).json({ success: false, message: 'Token refresh failed' });
+  }
+};
+
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// POST /api/auth/google
+// ── POST /auth/google ────────────────────────────────────────────
 export const googleAuth = async (req: Request, res: Response): Promise<void> => {
   try {
     const { idToken } = req.body;
-    
+
     if (!idToken) {
       res.status(400).json({ success: false, message: 'ID token is required' });
       return;
@@ -97,23 +161,27 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
     }
 
     const { email, name, picture } = payload;
-    
+
     let user = await User.findOne({ email });
-    
     if (!user) {
       user = await User.create({
         name: name || 'Google User',
         email,
         avatar: picture,
-        authProvider: 'google'
+        authProvider: 'google',
       });
     }
 
-    const token = generateToken(user._id.toString());
+    const accessToken = generateAccessToken(user._id.toString());
+    const newRefreshToken = generateRefreshToken(user._id.toString());
+    user.refreshToken = newRefreshToken;
+    await user.save();
+
     res.json({
       success: true,
-      token,
-      user: { name: user.name, email: user.email, phone: user.phone, avatar: user.avatar },
+      accessToken,
+      refreshToken: newRefreshToken,
+      user: { id: user._id, name: user.name, email: user.email, phone: user.phone, avatar: user.avatar },
     });
   } catch (error) {
     console.error('Google Auth Error:', error);
@@ -121,10 +189,10 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-// GET /api/auth/me
+// ── GET /auth/me ─────────────────────────────────────────────────
 export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const user = await User.findById(req.userId).select('-password -otp');
+    const user = await User.findById(req.userId).select('-password -otp -refreshToken');
     if (!user) {
       res.status(404).json({ success: false, message: 'User not found' });
       return;
@@ -135,7 +203,7 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
   }
 };
 
-// POST /api/auth/forgot-password
+// ── POST /auth/password/forgot ───────────────────────────────────
 export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email } = req.body;
@@ -159,7 +227,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
   }
 };
 
-// POST /api/auth/verify-otp
+// ── POST /auth/verify-otp ────────────────────────────────────────
 export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, otp } = req.body;
@@ -186,7 +254,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-// POST /api/auth/reset-password
+// ── POST /auth/password/reset ────────────────────────────────────
 export const resetPassword = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, otp, newPassword } = req.body;
