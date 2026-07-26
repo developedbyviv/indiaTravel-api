@@ -7,13 +7,13 @@ import { AuthRequest } from '../middleware/auth';
 // GET /api/user/profile
 export const getProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const user = await User.findById(req.userId).select('-password -otp');
+    const user = await User.findById(req.userId).select('-password -otp -refreshToken');
     if (!user) { res.status(404).json({ success: false, message: 'User not found' }); return; }
     res.json({ success: true, data: user });
   } catch { res.status(500).json({ success: false, message: 'Failed to get profile' }); }
 };
 
-// PUT /api/user/profile
+// PUT /PATCH /api/user/profile
 export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { name, phone, avatar } = req.body;
@@ -21,7 +21,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       req.userId,
       { name, phone, avatar },
       { new: true, runValidators: true }
-    ).select('-password -otp');
+    ).select('-password -otp -refreshToken');
     res.json({ success: true, data: user });
   } catch { res.status(500).json({ success: false, message: 'Failed to update profile' }); }
 };
@@ -32,6 +32,11 @@ export const changePassword = async (req: AuthRequest, res: Response): Promise<v
     const { currentPassword, newPassword } = req.body;
     const user = await User.findById(req.userId);
     if (!user) { res.status(404).json({ success: false, message: 'User not found' }); return; }
+
+    if (!user.password) {
+      res.status(400).json({ success: false, message: 'Password not set for this account' });
+      return;
+    }
 
     const match = await bcrypt.compare(currentPassword, user.password);
     if (!match) { res.status(400).json({ success: false, message: 'Current password is incorrect' }); return; }
@@ -79,6 +84,55 @@ export const addToCart = async (req: AuthRequest, res: Response): Promise<void> 
   } catch { res.status(500).json({ success: false, message: 'Failed to add to cart' }); }
 };
 
+// PUT /api/user/cart  — replace entire cart (spec: PUT /account/cart)
+export const replaceCart = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { items } = req.body; // items: { tourId, title, location, image? }[]
+    if (!Array.isArray(items)) {
+      res.status(400).json({ success: false, message: 'items must be an array' });
+      return;
+    }
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { cart: items },
+      { new: true, runValidators: true }
+    ).select('cart');
+    res.json({ success: true, data: user?.cart || [] });
+  } catch { res.status(500).json({ success: false, message: 'Failed to replace cart' }); }
+};
+
+// POST /api/user/cart/checkout  — convert cart to enquiry (spec: POST /account/cart/checkout)
+export const checkoutCart = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { traveller } = req.body;
+    const user = await User.findById(req.userId);
+    if (!user) { res.status(404).json({ success: false, message: 'User not found' }); return; }
+    if (!user.cart || user.cart.length === 0) {
+      res.status(400).json({ success: false, message: 'Cart is empty' });
+      return;
+    }
+
+    const cartItems = user.cart.map((item) => ({
+      id: item.tourId,
+      title: item.title,
+      location: item.location,
+    }));
+
+    const enquiry = await Enquiry.create({
+      type: 'cart',
+      userId: req.userId,
+      cartItems,
+      traveller,
+    });
+
+    // Clear the cart after checkout
+    user.cart = [];
+    await user.save();
+
+    res.status(201).json({ success: true, message: 'Checkout successful', data: enquiry });
+  } catch { res.status(500).json({ success: false, message: 'Checkout failed' }); }
+};
+
 // DELETE /api/user/cart/:id
 export const removeFromCart = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -120,7 +174,7 @@ export const addFavourite = async (req: AuthRequest, res: Response): Promise<voi
 // DELETE /api/user/favourites/:category/:id
 export const removeFavourite = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { category, id } = req.params;
+    const { category, id } = req.params as { category: string; id: string };
     const user = await User.findById(req.userId);
     if (!user) { res.status(404).json({ success: false, message: 'User not found' }); return; }
 

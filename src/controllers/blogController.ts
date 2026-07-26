@@ -4,11 +4,43 @@ import Blog from '../models/Blog';
 // GET /api/blogs
 export const getBlogs = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { category } = req.query;
-    const filter = category ? { category } : {};
-    // Return summaries — exclude full content array for performance
-    const blogs = await Blog.find(filter).select('-content');
-    res.json({ success: true, count: blogs.length, data: blogs });
+    const {
+      q,
+      tag,
+      category,
+      page = '1',
+      pageSize = '20',
+    } = req.query as Record<string, string>;
+
+    const filter: Record<string, unknown> = {};
+
+    if (q) {
+      filter['$text'] = { $search: q };
+    }
+    if (tag) filter.category = { $regex: tag, $options: 'i' };
+    if (category) filter.category = category;
+
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limit = Math.min(parseInt(pageSize, 10) || 20, 100);
+    const skip = (pageNum - 1) * limit;
+
+    const [blogs, total] = await Promise.all([
+      Blog.find(filter)
+        .select('-content')
+        .sort(q ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Blog.countDocuments(filter),
+    ]);
+
+    res.json({
+      success: true,
+      total,
+      page: pageNum,
+      pageSize: limit,
+      pages: Math.ceil(total / limit),
+      data: blogs,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch blogs' });
   }

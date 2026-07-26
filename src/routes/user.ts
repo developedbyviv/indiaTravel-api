@@ -7,6 +7,8 @@ import {
   getCart,
   addToCart,
   removeFromCart,
+  replaceCart,
+  checkoutCart,
   getFavourites,
   addFavourite,
   removeFavourite,
@@ -21,23 +23,26 @@ const router = Router();
 // All user routes require auth
 router.use(protect);
 
-// Profile
+// ── Profile ───────────────────────────────────────────────────────
 router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
+router.patch('/profile', updateProfile);          // spec: PATCH /account/profile
 router.put('/change-password', validate(changePasswordSchema), changePassword);
 router.delete('/account', deleteAccount);
 
-// Cart
+// ── Cart ──────────────────────────────────────────────────────────
 router.get('/cart', getCart);
 router.post('/cart', addToCart);
+router.put('/cart', replaceCart);                 // spec: PUT /account/cart
+router.post('/cart/checkout', checkoutCart);      // spec: POST /account/cart/checkout
 router.delete('/cart/:id', removeFromCart);
 
-// Favourites
+// ── Favourites ────────────────────────────────────────────────────
 router.get('/favourites', getFavourites);
 router.post('/favourites', addFavourite);
 router.delete('/favourites/:category/:id', removeFavourite);
 
-// Enquiry history
-router.get('/enquiries', getUserEnquiries);
+// ── Enquiry history ───────────────────────────────────────────────
+router.get('/enquiries', getUserEnquiries);       // spec: GET /account/enquiries
 
 export default router;
