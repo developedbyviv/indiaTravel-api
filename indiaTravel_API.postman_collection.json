@@ -1,149 +1,487 @@
 {
   "info": {
-    "name": "indiaTravel API",
-    "description": "Postman collection for the indiaTravel.net backend REST API.",
+    "name": "indiaTravel API v1",
+    "description": "Complete Postman collection for the indiaTravel.net backend REST API.\n\nBase URL: http://localhost:5001/v1\n\n**Quick Start:**\n1. Run \"Register\" or \"Login\" — access token is auto-saved to `{{accessToken}}` and refresh token to `{{refreshToken}}`.\n2. All protected requests automatically use `{{accessToken}}`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:5001/api",
-      "type": "string"
-    },
-    {
-      "key": "token",
-      "value": "",
-      "type": "string"
-    }
+    { "key": "baseUrl",      "value": "http://localhost:5001/v1", "type": "string" },
+    { "key": "accessToken",  "value": "",                         "type": "string" },
+    { "key": "refreshToken", "value": "",                         "type": "string" },
+    { "key": "enquiryId",    "value": "",                         "type": "string" },
+    { "key": "tourId",       "value": "",                         "type": "string" }
   ],
   "item": [
     {
-      "name": "Health",
+      "name": "🏥 Health",
       "request": {
         "method": "GET",
         "header": [],
-        "url": {
-          "raw": "http://localhost:5001/health",
-          "protocol": "http",
-          "host": [ "localhost" ],
-          "port": "5001",
-          "path": [ "health" ]
-        }
+        "url": { "raw": "http://localhost:5001/health", "protocol": "http", "host": ["localhost"], "port": "5001", "path": ["health"] }
       }
     },
+
     {
-      "name": "Auth",
+      "name": "🔐 Auth",
       "item": [
         {
-          "name": "Signup",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var jsonData = pm.response.json();",
-                  "if (jsonData.token) { pm.collectionVariables.set('token', jsonData.token); }"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "Register",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var d = pm.response.json();",
+            "if (d.accessToken)  pm.collectionVariables.set('accessToken',  d.accessToken);",
+            "if (d.refreshToken) pm.collectionVariables.set('refreshToken', d.refreshToken);"
+          ]}}],
           "request": {
             "method": "POST",
-            "header": [ { "key": "Content-Type", "value": "application/json" } ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"phone\": \"9876543210\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/auth/signup", "host": [ "{{baseUrl}}" ], "path": [ "auth", "signup" ] }
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"phone\": \"9876543210\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
           }
         },
         {
           "name": "Login",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var jsonData = pm.response.json();",
-                  "if (jsonData.token) { pm.collectionVariables.set('token', jsonData.token); }"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var d = pm.response.json();",
+            "if (d.accessToken)  pm.collectionVariables.set('accessToken',  d.accessToken);",
+            "if (d.refreshToken) pm.collectionVariables.set('refreshToken', d.refreshToken);"
+          ]}}],
           "request": {
             "method": "POST",
-            "header": [ { "key": "Content-Type", "value": "application/json" } ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "auth", "login" ] }
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
           }
         },
         {
-          "name": "Get Me (Protected)",
+          "name": "Refresh Token",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var d = pm.response.json();",
+            "if (d.accessToken)  pm.collectionVariables.set('accessToken',  d.accessToken);",
+            "if (d.refreshToken) pm.collectionVariables.set('refreshToken', d.refreshToken);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] }
+          }
+        },
+        {
+          "name": "Google Auth",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"idToken\": \"<google-id-token>\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/google", "host": ["{{baseUrl}}"], "path": ["auth", "google"] }
+          }
+        },
+        {
+          "name": "Get Me",
           "request": {
             "method": "GET",
-            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
-            "url": { "raw": "{{baseUrl}}/auth/me", "host": [ "{{baseUrl}}" ], "path": [ "auth", "me" ] }
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"test@example.com\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/password/forgot", "host": ["{{baseUrl}}"], "path": ["auth", "password", "forgot"] }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"test@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"newpassword123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/password/reset", "host": ["{{baseUrl}}"], "path": ["auth", "password", "reset"] }
           }
         }
       ]
     },
+
     {
-      "name": "Tours",
+      "name": "👤 Account",
       "item": [
         {
-          "name": "Get All Tours",
+          "name": "Get Profile",
           "request": {
             "method": "GET",
-            "header": [],
-            "url": { "raw": "{{baseUrl}}/tours", "host": [ "{{baseUrl}}" ], "path": [ "tours" ] }
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/account/profile", "host": ["{{baseUrl}}"], "path": ["account", "profile"] }
           }
         },
         {
-          "name": "Get Tours by Category",
+          "name": "Update Profile (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Updated Name\",\n  \"phone\": \"9876543210\"\n}" },
+            "url": { "raw": "{{baseUrl}}/account/profile", "host": ["{{baseUrl}}"], "path": ["account", "profile"] }
+          }
+        },
+        {
+          "name": "Get My Enquiries",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/account/enquiries", "host": ["{{baseUrl}}"], "path": ["account", "enquiries"] }
+          }
+        },
+        {
+          "name": "Get Cart",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/account/cart", "host": ["{{baseUrl}}"], "path": ["account", "cart"] }
+          }
+        },
+        {
+          "name": "Add to Cart",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"tourId\": \"{{tourId}}\",\n  \"title\": \"Golden Triangle Tour\",\n  \"location\": \"Delhi, Agra, Jaipur\",\n  \"image\": \"https://example.com/tour.jpg\"\n}" },
+            "url": { "raw": "{{baseUrl}}/account/cart", "host": ["{{baseUrl}}"], "path": ["account", "cart"] }
+          }
+        },
+        {
+          "name": "Replace Cart (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"items\": [\n    {\n      \"tourId\": \"{{tourId}}\",\n      \"title\": \"Golden Triangle Tour\",\n      \"location\": \"Delhi, Agra, Jaipur\",\n      \"image\": \"https://example.com/tour.jpg\"\n    }\n  ]\n}" },
+            "url": { "raw": "{{baseUrl}}/account/cart", "host": ["{{baseUrl}}"], "path": ["account", "cart"] }
+          }
+        },
+        {
+          "name": "Checkout Cart",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var d = pm.response.json();",
+            "if (d.data && d.data._id) pm.collectionVariables.set('enquiryId', d.data._id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"traveller\": {\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"john@example.com\",\n    \"phone\": \"9876543210\",\n    \"startDate\": \"2025-03-15\",\n    \"personCount\": 2,\n    \"message\": \"Looking forward to the trip!\"\n  }\n}" },
+            "url": { "raw": "{{baseUrl}}/account/cart/checkout", "host": ["{{baseUrl}}"], "path": ["account", "cart", "checkout"] }
+          }
+        },
+        {
+          "name": "Remove from Cart",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/account/cart/{{tourId}}", "host": ["{{baseUrl}}"], "path": ["account", "cart", "{{tourId}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📬 Contact & Support",
+      "item": [
+        {
+          "name": "Submit Contact Enquiry",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"email\": \"jane@example.com\",\n  \"countryCode\": \"+91\",\n  \"phone\": \"9876543210\",\n  \"country\": \"India\",\n  \"subject\": \"Enquiry about Golden Triangle Tour\",\n  \"message\": \"I would like to know more about your Golden Triangle tour packages and pricing options.\"\n}" },
+            "url": { "raw": "{{baseUrl}}/contact/enquiries", "host": ["{{baseUrl}}"], "path": ["contact", "enquiries"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🗺️ Enquiries (Trip)",
+      "item": [
+        {
+          "name": "Get Trip Options (Metadata)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/enquiries/trip/options", "host": ["{{baseUrl}}"], "path": ["enquiries", "trip", "options"] }
+          }
+        },
+        {
+          "name": "Submit Trip Enquiry",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var d = pm.response.json();",
+            "if (d.data && d.data._id) pm.collectionVariables.set('enquiryId', d.data._id);"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"mainTour\": \"{{tourId}}\",\n  \"addOns\": [\"photography\", \"cooking\"],\n  \"traveller\": {\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"john@example.com\",\n    \"phone\": \"9876543210\",\n    \"startDate\": \"2025-04-10\",\n    \"personCount\": 3,\n    \"meetingPoint\": \"Hotel Lobby\",\n    \"message\": \"Please arrange airport pick-up.\"\n  }\n}" },
+            "url": { "raw": "{{baseUrl}}/enquiries/trip", "host": ["{{baseUrl}}"], "path": ["enquiries", "trip"] }
+          }
+        },
+        {
+          "name": "Get My Enquiries (List)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/enquiries?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"], "path": ["enquiries"],
+              "query": [
+                { "key": "page",     "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "status",   "value": "pending",   "disabled": true },
+                { "key": "type",     "value": "trip",      "disabled": true },
+                { "key": "email",    "value": "john@example.com", "disabled": true },
+                { "key": "dateFrom", "value": "2025-01-01",       "disabled": true },
+                { "key": "dateTo",   "value": "2025-12-31",       "disabled": true },
+                { "key": "all",      "value": "true",             "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Enquiry by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/enquiries/{{enquiryId}}", "host": ["{{baseUrl}}"], "path": ["enquiries", "{{enquiryId}}"] }
+          }
+        },
+        {
+          "name": "Submit Itinerary Enquiry (Legacy)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"tourId\": \"{{tourId}}\",\n  \"selections\": {\n    \"transport\": \"Private Car\",\n    \"dining\": \"Vegetarian\",\n    \"hotelCategory\": \"4-Star\",\n    \"additionalPlaces\": [\"Amber Fort\", \"Hawa Mahal\"]\n  },\n  \"traveller\": {\n    \"fullName\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"phone\": \"9876543210\",\n    \"startDate\": \"2025-04-01\",\n    \"meetingPoint\": \"Hotel Lobby\"\n  }\n}" },
+            "url": { "raw": "{{baseUrl}}/enquiries", "host": ["{{baseUrl}}"], "path": ["enquiries"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "✨ Customize Tours",
+      "item": [
+        {
+          "name": "Get Customize Metadata",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/customize/meta", "host": ["{{baseUrl}}"], "path": ["customize", "meta"] }
+          }
+        },
+        {
+          "name": "Submit Custom Trip Enquiry",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"region\": \"Rajasthan\",\n  \"travelStyle\": \"Luxury\",\n  \"cities\": [\"Jaipur\", \"Udaipur\", \"Jodhpur\"],\n  \"travelPurpose\": \"Honeymoon\",\n  \"budget\": \"₹1,00,000 – ₹2,00,000\",\n  \"transport\": \"Private Car\",\n  \"travellerDetails\": {\n    \"firstName\": \"Jane\",\n    \"lastName\": \"Doe\",\n    \"email\": \"jane@example.com\",\n    \"phone\": \"9876543210\",\n    \"startDate\": \"2025-02-14\"\n  }\n}" },
+            "url": { "raw": "{{baseUrl}}/customize/enquiries", "host": ["{{baseUrl}}"], "path": ["customize", "enquiries"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🏛️ Tours",
+      "item": [
+        {
+          "name": "List Tours",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var d = pm.response.json();",
+            "if (d.data && d.data[0]) pm.collectionVariables.set('tourId', d.data[0]._id);"
+          ]}}],
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/tours?category=handpicked",
-              "host": [ "{{baseUrl}}" ],
-              "path": [ "tours" ],
-              "query": [ { "key": "category", "value": "handpicked" } ]
+              "raw": "{{baseUrl}}/tours?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"], "path": ["tours"],
+              "query": [
+                { "key": "page",      "value": "1" },
+                { "key": "pageSize",  "value": "20" },
+                { "key": "q",         "value": "taj",         "disabled": true },
+                { "key": "region",    "value": "Rajasthan",   "disabled": true },
+                { "key": "category",  "value": "handpicked",  "disabled": true },
+                { "key": "ratingMin", "value": "4",           "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Tour by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/tours/{{tourId}}", "host": ["{{baseUrl}}"], "path": ["tours", "{{tourId}}"] }
+          }
+        },
+        {
+          "name": "Add Tour Review (Auth)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"rating\": 5,\n  \"content\": \"Absolutely incredible experience! Our guide was knowledgeable and the itinerary was perfectly paced.\"\n}" },
+            "url": { "raw": "{{baseUrl}}/tours/{{tourId}}/reviews", "host": ["{{baseUrl}}"], "path": ["tours", "{{tourId}}", "reviews"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📍 Destinations",
+      "item": [
+        {
+          "name": "List Destinations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/destinations",
+              "host": ["{{baseUrl}}"], "path": ["destinations"],
+              "query": [
+                { "key": "q",      "value": "Jaipur",    "disabled": true },
+                { "key": "region", "value": "Rajasthan", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Destination by Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/destinations/jaipur", "host": ["{{baseUrl}}"], "path": ["destinations", "jaipur"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🎯 Activities",
+      "item": [
+        {
+          "name": "List Activities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/activities",
+              "host": ["{{baseUrl}}"], "path": ["activities"],
+              "query": [
+                { "key": "tag",         "value": "Safari",  "disabled": true },
+                { "key": "destination", "value": "Ranthambore", "disabled": true }
+              ]
             }
           }
         }
       ]
     },
+
     {
-      "name": "Blogs",
+      "name": "🍽️ Eat",
       "item": [
         {
-          "name": "Get All Blogs",
+          "name": "List Places to Eat",
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/blogs", "host": [ "{{baseUrl}}" ], "path": [ "blogs" ] }
+            "url": {
+              "raw": "{{baseUrl}}/eat",
+              "host": ["{{baseUrl}}"], "path": ["eat"],
+              "query": [
+                { "key": "city",    "value": "Jaipur",      "disabled": true },
+                { "key": "cuisine", "value": "Rajasthani",  "disabled": true }
+              ]
+            }
           }
         }
       ]
     },
+
     {
-      "name": "Enquiries",
+      "name": "📝 Blogs",
       "item": [
         {
-          "name": "Custom Tour Enquiry",
+          "name": "List Blogs",
           "request": {
-            "method": "POST",
-            "header": [ { "key": "Content-Type", "value": "application/json" } ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"region\": \"Rajasthan\",\n  \"travelStyle\": \"Luxury\",\n  \"cities\": [\"Jaipur\", \"Udaipur\"],\n  \"travelPurpose\": \"Family\",\n  \"budget\": \"Premium\",\n  \"transport\": \"SUV\",\n  \"traveller\": {\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"john@example.com\",\n    \"phone\": \"9876543210\"\n  }\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/enquiries/custom", "host": [ "{{baseUrl}}" ], "path": [ "enquiries", "custom" ] }
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/blogs?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"], "path": ["blogs"],
+              "query": [
+                { "key": "page",     "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "q",        "value": "rajasthan", "disabled": true },
+                { "key": "tag",      "value": "Safari",    "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Blog by Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/blogs/best-time-to-visit-india", "host": ["{{baseUrl}}"], "path": ["blogs", "best-time-to-visit-india"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📜 Policies",
+      "item": [
+        {
+          "name": "List All Policies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/policies", "host": ["{{baseUrl}}"], "path": ["policies"] }
+          }
+        },
+        {
+          "name": "Get Privacy Policy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/policies/privacy", "host": ["{{baseUrl}}"], "path": ["policies", "privacy"] }
+          }
+        },
+        {
+          "name": "Get Refund Policy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/policies/refund", "host": ["{{baseUrl}}"], "path": ["policies", "refund"] }
+          }
+        },
+        {
+          "name": "Get Cancellation Policy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/policies/cancellation", "host": ["{{baseUrl}}"], "path": ["policies", "cancellation"] }
+          }
+        },
+        {
+          "name": "Get Payment Policy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/policies/payment", "host": ["{{baseUrl}}"], "path": ["policies", "payment"] }
           }
         }
       ]
