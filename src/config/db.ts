@@ -1,4 +1,9 @@
+import dns from 'dns';
 import mongoose from 'mongoose';
+
+// Force reliable DNS resolvers for MongoDB Atlas SRV lookups.
+// Local ISP/router DNS often can't resolve mongodb.net SRV records.
+dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
 
 const connectDB = async (): Promise<void> => {
   const uri = process.env.MONGODB_URI;
@@ -9,6 +14,7 @@ const connectDB = async (): Promise<void> => {
   try {
     const conn = await mongoose.connect(uri);
     console.log(`✅ MongoDB connected: ${conn.connection.host}`);
+    console.log(`   Database: ${conn.connection.name}`);
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error);
     process.exit(1);
